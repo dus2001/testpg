@@ -9,17 +9,39 @@ build-parameters:
   before-all:
     - builder: custom
       commands:
-        - npx cds build --production
+        - npx cds build
+        - ./pg-build.sh
 modules:
-  - name: testpg-srv
-    type: nodejs
+  - name: testpg-srv 
+    type: nodejs 
     path: gen/srv
     parameters:
       buildpack: nodejs_buildpack
-    build-parameters:
+    build-parameters: 
       builder: npm
     provides:
       - name: srv-api # required by consumers of CAP services (e.g. approuter)
         properties:
           srv-url: ${default-url}
-    requires: []
+    requires:
+      - name: pg-database
+  - name: testpg-db-deployer
+    type: nodejs
+    path: gen/pg
+    parameters:
+      no-route: true
+      no-start: true
+      disk-quota: 512MB
+      memory: 256MB
+      tasks:
+      - name: deploy-to-postgresql
+        command: npm start
+        disk-quota: 512MB
+        memory: 256MB
+    build-parameters:
+      ignore: ["node_modules/"]
+    requires:
+      - name: pg-database
+resources:
+  - name: pg-database
+    type: org.cloudfoundry.existing-service
